@@ -61,22 +61,8 @@ jobs:
       - name: Run tests with npm test
         run: npm test
         working-directory: 'GithubActions/'
-        timeout-minutes: 10
-      - name: Check if tests passed
-        id: check_tests
-        shell: pwsh
-        run: |
-          if (Test-Path test-results.json) {
-            $PASSED_TESTS = jq -r '.testResults[] | select(.status=="passed") | .name' test-results.json | Join-String -Separator ", "
-            if ($PASSED_TESTS) {
-              Write-Output "TESTS_PASSED=true" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
-            } else {
-              Write-Output "TESTS_PASSED=false" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
-            }
-          } else {
-            Write-Output "TESTS_PASSED=false" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
-          }
-
+        timeout-minutes: 1
+   
       - name: Commit new test results if npm test passes
         if: env.TESTS_PASSED == 'true' && env.NEW_TESTS_FOUND == 'true'
         shell: pwsh
