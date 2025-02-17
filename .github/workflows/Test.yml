@@ -20,12 +20,13 @@ jobs:
           fetch-depth: 0  # Clonar todo el historial para poder hacer `git diff`
 
       - name: Ensure full history
+        shell: pwsh  # Use PowerShell as the shell
         run: |
-          if (git rev-parse --is-shallow-repository); then
+          if ((git rev-parse --is-shallow-repository) -eq "true") {
             git fetch --unshallow
-          else
-            echo "Repository is already complete, skipping unshallow fetch."
-          fi
+          } else {
+            Write-Output "Repository is already complete, skipping unshallow fetch."
+          }
 
       - name: Debug workspace
         run: dir  # Muestra los archivos en el repositorio para depuración
@@ -48,17 +49,18 @@ jobs:
 
       - name: Detect new test files
         id: new_tests
+        shell: pwsh  # Use PowerShell as the shell
         run: |
           # Detectar nuevos archivos .spec.ts o .test.ts en el último commit
-          $NEW_TESTS=$(git diff --name-only HEAD~1 HEAD | grep -E '\.spec\.ts$|\.test\.ts$' || echo "")
-          if [[ -n "$NEW_TESTS" ]]; then
-            echo "New test files detected: $NEW_TESTS"
-            echo "NEW_TESTS_FOUND=true" >> $GITHUB_ENV
-            echo "NEW_TESTS=$NEW_TESTS" >> $GITHUB_ENV
-          else
-            echo "No new test files detected."
-            echo "NEW_TESTS_FOUND=false" >> $GITHUB_ENV
-          fi
+          $NEW_TESTS = git diff --name-only HEAD~1 HEAD | Select-String -Pattern '\.spec\.ts$|\.test\.ts$'
+          if ($NEW_TESTS) {
+            Write-Output "New test files detected: $NEW_TESTS"
+            Write-Output "NEW_TESTS_FOUND=true" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+            Write-Output "NEW_TESTS=$NEW_TESTS" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          } else {
+            Write-Output "No new test files detected."
+            Write-Output "NEW_TESTS_FOUND=false" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          }
 
       - name: Run tests with npm test
         run: |
@@ -66,27 +68,29 @@ jobs:
 
       - name: Check if tests passed
         id: check_tests
+        shell: pwsh  # Use PowerShell as the shell
         run: |
-          if [[ -f test-results.json ]]; then
-            PASSED_TESTS=$(jq -r '.testResults[] | select(.status=="passed") | .name' test-results.json | tr '\n' ', ')
-            if [[ -n "$PASSED_TESTS" ]]; then
-              echo "PASSED_TESTS=$PASSED_TESTS" >> $GITHUB_ENV
-              echo "TESTS_PASSED=true" >> $GITHUB_ENV
-            else
-              echo "No tests passed."
-              echo "TESTS_PASSED=false" >> $GITHUB_ENV
-            fi
-          else
-            echo "No test results found."
-            echo "TESTS_PASSED=false" >> $GITHUB_ENV
-          fi
+          if (Test-Path test-results.json) {
+            $PASSED_TESTS = jq -r '.testResults[] | select(.status=="passed") | .name' test-results.json | Join-String -Separator ", "
+            if ($PASSED_TESTS) {
+              Write-Output "PASSED_TESTS=$PASSED_TESTS" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+              Write-Output "TESTS_PASSED=true" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+            } else {
+              Write-Output "No tests passed."
+              Write-Output "TESTS_PASSED=false" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+            }
+          } else {
+            Write-Output "No test results found."
+            Write-Output "TESTS_PASSED=false" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          }
 
       - name: Commit new test results if npm test passes
         if: env.TESTS_PASSED == 'true' && env.NEW_TESTS_FOUND == 'true'
+        shell: pwsh  # Use PowerShell as the shell
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions@users.noreply.github.com"
-          git commit --allow-empty -m " NEW TESTS PASSED: ${{ env.PASSED_TESTS }}"
+          git commit --allow-empty -m "NEW TESTS PASSED: ${{ env.PASSED_TESTS }}"
           git push
 
 
