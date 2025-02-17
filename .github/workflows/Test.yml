@@ -19,9 +19,6 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Debug workspace
-        run: dir
-
       - name: Ensure full history
         shell: pwsh
         run: |
@@ -56,7 +53,6 @@ jobs:
           if ($NEW_TESTS) {
             Write-Output "New test files detected: $NEW_TESTS"
             Write-Output "NEW_TESTS_FOUND=true" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
-            Write-Output "NEW_TESTS=$NEW_TESTS" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
           } else {
             Write-Output "No new test files detected."
             Write-Output "NEW_TESTS_FOUND=false" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
@@ -65,7 +61,7 @@ jobs:
       - name: Run tests with npm test
         run: npm test
         working-directory: 'GithubActions/'
-
+        timeout-minutes: 10
       - name: Check if tests passed
         id: check_tests
         shell: pwsh
@@ -73,14 +69,11 @@ jobs:
           if (Test-Path test-results.json) {
             $PASSED_TESTS = jq -r '.testResults[] | select(.status=="passed") | .name' test-results.json | Join-String -Separator ", "
             if ($PASSED_TESTS) {
-              Write-Output "PASSED_TESTS=$PASSED_TESTS" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
               Write-Output "TESTS_PASSED=true" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
             } else {
-              Write-Output "No tests passed."
               Write-Output "TESTS_PASSED=false" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
             }
           } else {
-            Write-Output "No test results found."
             Write-Output "TESTS_PASSED=false" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
           }
 
