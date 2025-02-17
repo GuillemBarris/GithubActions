@@ -17,7 +17,12 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Asegura que se clona todo el historial del repositorio
       
+      - name: Debug workspace
+        run: ls -R  # Lista los archivos para verificar la presencia de package.json
+
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
@@ -29,17 +34,22 @@ jobs:
       - name: Run tests and capture passed test names
         run: |
           npm test -- --json --outputFile=test-results.json || true
-          PASSED_TESTS=$(jq -r '.testResults[] | select(.status=="passed") | .name' test-results.json)
-          echo "PASSED_TESTS<<EOF" >> $GITHUB_ENV
-          echo "$PASSED_TESTS" >> $GITHUB_ENV
-          echo "EOF" >> $GITHUB_ENV
+          if [ -f test-results.json ]; then
+            PASSED_TESTS=$(jq -r '.testResults[] | select(.status=="passed") | .name' test-results.json)
+            if [ -n "$PASSED_TESTS" ]; then
+              echo "PASSED_TESTS<<EOF" >> $GITHUB_ENV
+              echo "$PASSED_TESTS" >> $GITHUB_ENV
+              echo "EOF" >> $GITHUB_ENV
+            fi
+          fi
 
       - name: Commit test results if tests pass
         if: env.PASSED_TESTS != ''
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions@users.noreply.github.com"
-          for test in $PASSED_TESTS; do
+          while IFS= read -r test; do
             git commit --allow-empty -m "TEST: $test"
-          done
+          done <<< "$PASSED_TESTS"
           git push
+
