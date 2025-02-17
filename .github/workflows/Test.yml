@@ -63,7 +63,7 @@ jobs:
           }
 
       - name: Run tests with npm test
-        run: npm test 
+        run: npm test
         working-directory: 'GithubActions/'
 
       - name: Check if tests passed
