@@ -1,4 +1,4 @@
-name: TDD Workflow
+name: Test Workflow
 on:
   push:
     branches:
@@ -10,17 +10,20 @@ on:
       - develop
 jobs:
   test:
-    runs-on: windows-latest  # Use Windows runner
+    runs-on: windows-latest  # Usamos Windows como entorno
     
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # Ensures the entire repository history is cloned
+          fetch-depth: 0  # Clonar todo el historial para poder hacer `git diff`
+
+      - name: Ensure full history
+        run: git fetch --unshallow  # Asegura que tenemos el historial completo
 
       - name: Debug workspace
-        run: dir  # Use 'dir' on Windows to list files in the repository
-
+        run: dir  # Muestra los archivos en el repositorio para depuración
+      
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
@@ -29,56 +32,58 @@ jobs:
       - name: Cache Node.js modules
         uses: actions/cache@v2
         with:
-          path: C:\Users\runneradmin\AppData\Roaming\npm-cache  # Adjust path for Windows
+          path: C:\Users\runneradmin\AppData\Roaming\npm-cache  # Cache en Windows
           key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
           restore-keys: |
             ${{ runner.os }}-node-
 
-      - name: Navigate to project directory (if needed)
-        run: |
-          cd GithubActions  # Use this if package.json is in a subfolder
-          dir  # Verify the files in the directory
-
       - name: Install dependencies
+        run: npm install
+
+      - name: Detect new test files
+        id: new_tests
         run: |
-          cd GithubActions  # Use this if package.json is in a subfolder
-          npm install
+          # Detectar nuevos archivos .spec.ts o .test.ts en el último commit
+          $NEW_TESTS = git diff --name-only HEAD~1 HEAD | Select-String -Pattern '\.spec\.ts$|\.test\.ts$'
+          if ($NEW_TESTS) {
+            Write-Host "New test files detected: $NEW_TESTS"
+            echo "NEW_TESTS_FOUND=true" >> $env:GITHUB_ENV
+            echo "NEW_TESTS=$NEW_TESTS" >> $env:GITHUB_ENV
+          } else {
+            Write-Host "No new test files detected."
+            echo "NEW_TESTS_FOUND=false" >> $env:GITHUB_ENV
+          }
 
       - name: Run tests with npm test
         run: |
-          cd GithubActions  # Use this if package.json is in a subfolder
-          npm test -- --json --outputFile=test-results.json || true
+          npm test -- --json --outputFile=test-results.json || true  # Ejecuta los tests y guarda los resultados
 
-      - name: Check if any new tests have been added
+      - name: Check if tests passed
+        id: check_tests
         run: |
-          # List new test files added in the last commit
-          $NEW_TESTS = git diff --name-only HEAD~1 HEAD | Select-String -Pattern '\.test\.js$|\.spec\.js$'
-          if ($NEW_TESTS) {
-            Write-Host "New test files detected: $NEW_TESTS"
-            $env.NEW_TESTS = $NEW_TESTS -join "`n"  # Set the new test files in the environment variable
-          } else {
-            Write-Host "No new test files detected."
-          }
-
-      - name: Commit new test results if npm test passes
-        if: ${{ success() && env.NEW_TESTS != '' }}
-        run: |
-          # Check if the tests passed by reading the result file
           if (Test-Path test-results.json) {
             $PASSED_TESTS = (Get-Content test-results.json | ConvertFrom-Json).testResults | Where-Object { $_.status -eq 'passed' } | Select-Object -ExpandProperty name
             if ($PASSED_TESTS) {
               Write-Host "PASSED_TESTS<<EOF"
               $PASSED_TESTS | Write-Host
               Write-Host "EOF"
-              $env.PASSED_TESTS = $PASSED_TESTS -join "`n"  # Set passed tests in the environment variable
-              
-              # Commit the new test results
-              git config --global user.name "github-actions[bot]"
-              git config --global user.email "github-actions@users.noreply.github.com"
-              $PASSED_TESTS_COMMIT_MESSAGE = "NEW TESTS PASSED: $env.PASSED_TESTS"
-              git commit --allow-empty -m $PASSED_TESTS_COMMIT_MESSAGE
-              git push
+              echo "PASSED_TESTS=$($PASSED_TESTS -join ', ')" >> $env:GITHUB_ENV
+              echo "TESTS_PASSED=true" >> $env:GITHUB_ENV
+            } else {
+              Write-Host "No tests passed."
+              echo "TESTS_PASSED=false" >> $env:GITHUB_ENV
             }
+          } else {
+            Write-Host "No test results found."
+            echo "TESTS_PASSED=false" >> $env:GITHUB_ENV
           }
+
+      - name: Commit new test results if npm test passes
+        if: env.TESTS_PASSED == 'true' && env.NEW_TESTS_FOUND == 'true'
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions@users.noreply.github.com"
+          git commit --allow-empty -m " NEW TESTS PASSED: ${{ env.PASSED_TESTS }}"
+          git push
 
 
