@@ -36,23 +36,23 @@ jobs:
       
       - name: Navigate to project directory (if needed)
         run: |
-          cd my-project  # Use this if package.json is in a subfolder
+          cd GithubActions  # Use this if package.json is in a subfolder
           dir  # Verify the files in the directory
 
       - name: Install dependencies
         run: |
-          cd my-project  # Use this if package.json is in a subfolder
+          cd GithubActions  # Use this if package.json is in a subfolder
           npm install
 
       - name: Start the application (if needed)
         run: |
-          cd my-project  # Use this if package.json is in a subfolder
+          cd GithubActions  # Use this if package.json is in a subfolder
           npm run start &  # Starts your application in the background
         continue-on-error: true  # This ensures the workflow doesn't fail if app start fails (useful for test environments)
 
       - name: Run tests and capture passed test names
         run: |
-          cd my-project  # Use this if package.json is in a subfolder
+          cd GithubActions  # Use this if package.json is in a subfolder
           npm test -- --json --outputFile=test-results.json || true
           if (Test-Path test-results.json) {
             $PASSED_TESTS = (Get-Content test-results.json | ConvertFrom-Json).testResults | Where-Object { $_.status -eq 'passed' } | Select-Object -ExpandProperty name
