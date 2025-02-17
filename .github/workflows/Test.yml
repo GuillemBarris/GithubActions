@@ -65,14 +65,12 @@ jobs:
           }
 
       - name: Commit all passed test results in one commit
-        if: ${{ env.PASSED_TESTS != '' }}  # Correct the condition for GitHub Actions
+        if: ${{ env.PASSED_TESTS != '' }}  # Only commit if there are passed tests
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions@users.noreply.github.com"
           $PASSED_TESTS_COMMIT_MESSAGE = "TESTS PASSED: $env:PASSED_TESTS"
           git commit --allow-empty -m $PASSED_TESTS_COMMIT_MESSAGE
           git push
-
-        if: ${{ env.PASSED_TESTS != '' }}  # Correct the condition for Git
 
 
