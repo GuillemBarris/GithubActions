@@ -38,7 +38,7 @@ jobs:
         run: |
           cd my-project  # Use this if package.json is in a subfolder
           dir  # Verify the files in the directory
-      
+
       - name: Install dependencies
         run: |
           cd my-project  # Use this if package.json is in a subfolder
@@ -63,8 +63,16 @@ jobs:
               $env:PASSED_TESTS = $PASSED_TESTS -join "`n"  # Set passed tests in the environment variable
             }
           }
-      
+
       - name: Commit all passed test results in one commit
+        if: ${{ env.PASSED_TESTS != '' }}  # Correct the condition for GitHub Actions
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions@users.noreply.github.com"
+          $PASSED_TESTS_COMMIT_MESSAGE = "TESTS PASSED: $env:PASSED_TESTS"
+          git commit --allow-empty -m $PASSED_TESTS_COMMIT_MESSAGE
+          git push
+
         if: ${{ env.PASSED_TESTS != '' }}  # Correct the condition for Git
 
 
