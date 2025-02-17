@@ -11,16 +11,17 @@ on:
 
 jobs:
   test:
-    runs-on: windows-latest  # Usamos Windows como runner
+    runs-on: windows-latest  # Use Windows as the runner
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # Clonar todo el historial para poder hacer `git diff`
+          fetch-depth: 0  # Clone full history for `git diff`
+          token: ${{ secrets.GITHUB_TOKEN }}  # Ensure write permissions
 
       - name: Debug workspace
-        run: dir  # Muestra los archivos en el repositorio para depuración
+        run: dir  # List files for debugging
 
       - name: Ensure full history
         shell: pwsh  # Use PowerShell as the shell
@@ -39,20 +40,23 @@ jobs:
       - name: Cache Node.js modules
         uses: actions/cache@v2
         with:
-          path: C:\Users\runneradmin\AppData\Roaming\npm-cache  # Cache en Windows
+          path: ~/.npm  # Correct cache path for npm on Windows
           key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
           restore-keys: |
             ${{ runner.os }}-node-
 
       - name: Install dependencies
         run: npm install
-        working-directory: ''
+        working-directory: 'GithubActions'  # Update this to the correct directory
+
+      - name: Install jq
+        run: choco install jq -y  # Install jq for parsing JSON
 
       - name: Detect new test files
         id: new_tests
         shell: pwsh  # Use PowerShell as the shell
         run: |
-          # Detectar nuevos archivos .spec.ts o .test.ts en el último commit
+          # Detect new .spec.ts or .test.ts files in the latest commit
           $NEW_TESTS = git diff --name-only HEAD~1 HEAD | Select-String -Pattern '\.spec\.ts$|\.test\.ts$'
           if ($NEW_TESTS) {
             Write-Output "New test files detected: $NEW_TESTS"
@@ -64,8 +68,7 @@ jobs:
           }
 
       - name: Run tests with npm test
-        run: |
-          npm test -- --json --outputFile=test-results.json || true  # Ejecuta los tests y guarda los resultados
+        run: npm test -- --json --outputFile=test-results.json  # Run tests and save results
 
       - name: Check if tests passed
         id: check_tests
@@ -91,7 +94,11 @@ jobs:
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions@guillembarris.noreply.github.com"
-          git commit --allow-empty -m "NEW TESTS PASSED: ${{ env.PASSED_TESTS }}"
-          git push
+          if (git status --porcelain) {
+            git commit -m "NEW TESTS PASSED: ${{ env.PASSED_TESTS }}"
+            git push
+          } else {
+            Write-Output "No changes to commit."
+          }
 
 
