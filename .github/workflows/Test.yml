@@ -19,7 +19,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0  # Asegura que se clona todo el historial del repositorio
-      
+
       - name: Debug workspace
         run: ls -R  # Lista los archivos para verificar la presencia de package.json
 
@@ -27,6 +27,14 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '18'
+
+      - name: Cache Node.js modules
+        uses: actions/cache@v2
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
 
       - name: Install dependencies
         run: npm install
@@ -43,13 +51,12 @@ jobs:
             fi
           fi
 
-      - name: Commit test results if tests pass
+      - name: Commit all passed test results in one commit
         if: env.PASSED_TESTS != ''
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions@users.noreply.github.com"
-          while IFS= read -r test; do
-            git commit --allow-empty -m "TEST: $test"
-          done <<< "$PASSED_TESTS"
+          PASSED_TESTS_COMMIT_MESSAGE="TESTS PASSED: $PASSED_TESTS"
+          git commit --allow-empty -m "$PASSED_TESTS_COMMIT_MESSAGE"
           git push
 
