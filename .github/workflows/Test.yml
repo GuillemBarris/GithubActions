@@ -1,0 +1,45 @@
+name: TDD Workflow
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+  pull_request:
+    branches:
+      - main
+      - develop
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Run tests and capture passed test names
+        run: |
+          npm test -- --json --outputFile=test-results.json || true
+          PASSED_TESTS=$(jq -r '.testResults[] | select(.status=="passed") | .name' test-results.json)
+          echo "PASSED_TESTS<<EOF" >> $GITHUB_ENV
+          echo "$PASSED_TESTS" >> $GITHUB_ENV
+          echo "EOF" >> $GITHUB_ENV
+
+      - name: Commit test results if tests pass
+        if: env.PASSED_TESTS != ''
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions@users.noreply.github.com"
+          for test in $PASSED_TESTS; do
+            git commit --allow-empty -m "TEST: $test"
+          done
+          git push
