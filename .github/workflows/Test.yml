@@ -61,7 +61,7 @@ jobs:
 
       - name: Run tests with npm test
         run: |
-          npm test || (echo "Timeout or disconnection error, continuing..." && exit 0) 
+          npm test || (echo "Timeout or disconnection error, continuing..." && exit 1) 
         working-directory: 'GithubActions/'
         timeout-minutes: 1
 
