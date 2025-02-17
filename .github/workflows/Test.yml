@@ -46,7 +46,7 @@ jobs:
 
       - name: Install dependencies
         run: npm install
-        working-directory: 'C:\Users\guill\OneDrive\Documentos\GitHub\classes\GithubAction\'  # Ajusta esto según la ubicación de tu package.json
+        working-directory: 'C:\Users\guill\OneDrive\Documentos\GitHub\classes\GithubActions\GithubActions\'  # Ajusta esto según la ubicación de tu package.json
 
       - name: Detect new test files
         id: new_tests
