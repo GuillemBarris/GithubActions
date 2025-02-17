@@ -1,36 +1,62 @@
-# This is a basic workflow to help you get started with Actions
+name: TDD Workflow
 
-name: CI
-
-# Controls when the workflow will run
 on:
-  # Triggers the workflow on push or pull request events but only for the "main" branch
   push:
-    branches: [ "main" ]
+    branches:
+      - main
+      - develop
   pull_request:
-    branches: [ "main" ]
+    branches:
+      - main
+      - develop
 
-  # Allows you to run this workflow manually from the Actions tab
-  workflow_dispatch:
-
-# A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
-  # This workflow contains a single job called "build"
-  build:
-    # The type of runner that the job will run on
+  test:
     runs-on: ubuntu-latest
-
-    # Steps represent a sequence of tasks that will be executed as part of the job
+    
     steps:
-      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Asegura que se clona todo el historial del repositorio
 
-      # Runs a single command using the runners shell
-      - name: Run a one-line script
-        run: echo Hello, world!
+      - name: Verificar estructura del repositorio
+        run: ls -R  # Lista los archivos para verificar la presencia de package.json
 
-      # Runs a set of commands using the runners shell
-      - name: Run a multi-line script
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Cache Node.js modules
+        uses: actions/cache@v2
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Run tests and capture passed test names
         run: |
-          echo Add other actions to build,
-          echo test, and deploy your project.
+          npm test -- --json --outputFile=test-results.json || true
+          if [ -f test-results.json ]; then
+            PASSED_TESTS=$(jq -r '.testResults[] | select(.status=="passed") | .name' test-results.json)
+            if [ -n "$PASSED_TESTS" ]; then
+              echo "PASSED_TESTS<<EOF" >> $GITHUB_ENV
+              echo "$PASSED_TESTS" >> $GITHUB_ENV
+              echo "EOF" >> $GITHUB_ENV
+            fi
+          fi
+
+      - name: Commit all passed test results in one commit
+        if: env.PASSED_TESTS != ''
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions@users.noreply.github.com"
+          PASSED_TESTS_COMMIT_MESSAGE="TESTS PASSED: $PASSED_TESTS"
+          git commit --allow-empty -m "$PASSED_TESTS_COMMIT_MESSAGE"
+          git push
+
