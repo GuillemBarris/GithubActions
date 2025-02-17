@@ -46,7 +46,7 @@ jobs:
 
       - name: Install dependencies
         run: npm install
-        working-directory: ./frontend  # Adjust this to the correct subdirectory
+        working-directory: ''
 
       - name: Detect new test files
         id: new_tests
@@ -90,7 +90,7 @@ jobs:
         shell: pwsh  # Use PowerShell as the shell
         run: |
           git config --global user.name "github-actions[bot]"
-          git config --global user.email "github-actions@users.noreply.github.com"
+          git config --global user.email "github-actions@guillembarris.noreply.github.com"
           git commit --allow-empty -m "NEW TESTS PASSED: ${{ env.PASSED_TESTS }}"
           git push
 
