@@ -65,7 +65,7 @@ jobs:
 
       - name: Run tests with npm test
         run: npm test
-        working-directory: 'GithubActions/src'  # Ruta relativa
+        working-directory: 'GithubActions/'  # Ruta relativa
 
       - name: Check if tests passed
         id: check_tests
