@@ -44,19 +44,9 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-node-
 
-      - name: Verify working directory
-        shell: pwsh
-        run: |
-          if (Test-Path -Path 'C:/Users/guill/OneDrive/Documentos/GitHub/classes/GithubActions/GithubActions/') {
-            Write-Output "Directory exists."
-          } else {
-            Write-Error "Directory does not exist."
-            exit 1
-          }
-
       - name: Install dependencies
         run: npm install
-        working-directory: 'C:/Users/guill/OneDrive/Documentos/GitHub/classes/GithubActions/GithubActions/'
+        working-directory: 'GithubActions/'  # Ruta relativa
 
       - name: Detect new test files
         id: new_tests
@@ -75,7 +65,7 @@ jobs:
 
       - name: Run tests with npm test
         run: npm test -- --json --outputFile=test-results.json
-        working-directory: 'src'  # Ajusta esto según la ubicación de tu package.json
+        working-directory: 'GithubActions/src'  # Ruta relativa
 
       - name: Check if tests passed
         id: check_tests
