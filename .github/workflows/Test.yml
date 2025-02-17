@@ -63,8 +63,8 @@ jobs:
           }
 
       - name: Run tests with npm test
-        run: npm test -- --json --outputFile=test-results.json
-        working-directory: 'GithubActions/src'
+        run: npm test 
+        working-directory: 'GithubActions/'
 
       - name: Check if tests passed
         id: check_tests
