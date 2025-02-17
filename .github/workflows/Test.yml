@@ -1,4 +1,4 @@
-name: TDD Workflow
+name: Test Workflow
 on:
   push:
     branches:
@@ -17,7 +17,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # Clonar todo el historial para poder hacer `git diff`
+          fetch-depth: 1  # Clonar solo el último commit para evitar problemas
 
       - name: Debug workspace
         run: dir  # Muestra los archivos en el repositorio para depuración
@@ -30,6 +30,9 @@ jobs:
           } else {
             Write-Output "Repository is already complete, skipping unshallow fetch."
           }
+
+      - name: Debug repository structure
+        run: Get-ChildItem -Recurse  # Verifica todos los archivos en la estructura del repo
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -44,9 +47,16 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-node-
 
+      - name: Verify package.json existence
+        run: |
+          if (!(Test-Path "package.json")) {
+            Write-Error "package.json not found!"
+            exit 1
+          }
+
       - name: Install dependencies
         run: npm install
-        working-directory: ./  # Adjust this if `package.json` is in a subdirectory
+        working-directory: ./  # Ajusta si `package.json` está en una subcarpeta
 
       - name: Detect new test files
         id: new_tests
@@ -90,7 +100,7 @@ jobs:
         shell: pwsh  # Use PowerShell as the shell
         run: |
           git config --global user.name "github-actions[bot]"
-          git config --global user.email "github-actions@users.noreply.github.com"
+          git config --global user.email "github-actions@guillembarris.noreply.github.com"
           git commit --allow-empty -m "NEW TESTS PASSED: ${{ env.PASSED_TESTS }}"
           git push
 
