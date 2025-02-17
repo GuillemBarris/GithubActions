@@ -11,19 +11,19 @@ on:
 
 jobs:
   test:
-    runs-on: windows-latest  # Usamos Windows como runner
+    runs-on: windows-latest
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # Clonar todo el historial para poder hacer `git diff`
+          fetch-depth: 0
 
       - name: Debug workspace
-        run: dir  # Muestra los archivos en el repositorio para depuración
+        run: dir
 
       - name: Ensure full history
-        shell: pwsh  # Use PowerShell as the shell
+        shell: pwsh
         run: |
           if ((git rev-parse --is-shallow-repository) -eq "true") {
             git fetch --unshallow
@@ -39,20 +39,19 @@ jobs:
       - name: Cache Node.js modules
         uses: actions/cache@v2
         with:
-          path: ~/.npm  # Cache en Windows
+          path: ~/.npm
           key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
           restore-keys: |
             ${{ runner.os }}-node-
 
       - name: Install dependencies
         run: npm install
-        working-directory: 'GithubActions/'  # Ruta relativa
+        working-directory: 'GithubActions/'
 
       - name: Detect new test files
         id: new_tests
-        shell: pwsh  # Use PowerShell as the shell
+        shell: pwsh
         run: |
-          # Detectar nuevos archivos .spec.ts o .test.ts en el último commit
           $NEW_TESTS = git diff --name-only HEAD~1 HEAD | Select-String -Pattern '\.spec\.ts$|\.test\.ts$'
           if ($NEW_TESTS) {
             Write-Output "New test files detected: $NEW_TESTS"
@@ -64,12 +63,12 @@ jobs:
           }
 
       - name: Run tests with npm test
-        run: npm test
-        working-directory: 'GithubActions/'  # Ruta relativa
+        run: npm test -- --json --outputFile=test-results.json
+        working-directory: 'GithubActions/src'
 
       - name: Check if tests passed
         id: check_tests
-        shell: pwsh  # Use PowerShell as the shell
+        shell: pwsh
         run: |
           if (Test-Path test-results.json) {
             $PASSED_TESTS = jq -r '.testResults[] | select(.status=="passed") | .name' test-results.json | Join-String -Separator ", "
@@ -87,10 +86,11 @@ jobs:
 
       - name: Commit new test results if npm test passes
         if: env.TESTS_PASSED == 'true' && env.NEW_TESTS_FOUND == 'true'
-        shell: pwsh  # Use PowerShell as the shell
+        shell: pwsh
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions@guillembarris.noreply.github.com"
+          git add .
           if (git status --porcelain) {
             git commit -m "NEW TESTS PASSED: ${{ env.PASSED_TESTS }}"
             git push
