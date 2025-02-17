@@ -1,4 +1,4 @@
-name: Test Workflow
+name: TDD Workflow
 on:
   push:
     branches:
@@ -52,5 +52,41 @@ jobs:
           # Detectar nuevos archivos .spec.ts o .test.ts en el último commit
           $NEW_TESTS=$(git diff --name-only HEAD~1 HEAD | grep -E '\.spec\.ts$|\.test\.ts$' || echo "")
           if [[ -n "$NEW_TESTS" ]]; then
-            echo "New test files de
+            echo "New test files detected: $NEW_TESTS"
+            echo "NEW_TESTS_FOUND=true" >> $GITHUB_ENV
+            echo "NEW_TESTS=$NEW_TESTS" >> $GITHUB_ENV
+          else
+            echo "No new test files detected."
+            echo "NEW_TESTS_FOUND=false" >> $GITHUB_ENV
+          fi
+
+      - name: Run tests with npm test
+        run: |
+          npm test -- --json --outputFile=test-results.json || true  # Ejecuta los tests y guarda los resultados
+
+      - name: Check if tests passed
+        id: check_tests
+        run: |
+          if [[ -f test-results.json ]]; then
+            PASSED_TESTS=$(jq -r '.testResults[] | select(.status=="passed") | .name' test-results.json | tr '\n' ', ')
+            if [[ -n "$PASSED_TESTS" ]]; then
+              echo "PASSED_TESTS=$PASSED_TESTS" >> $GITHUB_ENV
+              echo "TESTS_PASSED=true" >> $GITHUB_ENV
+            else
+              echo "No tests passed."
+              echo "TESTS_PASSED=false" >> $GITHUB_ENV
+            fi
+          else
+            echo "No test results found."
+            echo "TESTS_PASSED=false" >> $GITHUB_ENV
+          fi
+
+      - name: Commit new test results if npm test passes
+        if: env.TESTS_PASSED == 'true' && env.NEW_TESTS_FOUND == 'true'
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions@users.noreply.github.com"
+          git commit --allow-empty -m " NEW TESTS PASSED: ${{ env.PASSED_TESTS }}"
+          git push
+
 
