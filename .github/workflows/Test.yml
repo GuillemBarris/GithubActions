@@ -20,7 +20,7 @@ jobs:
 
       - name: Debug workspace
         run: dir  # Use 'dir' on Windows to list files in the repository
-      
+
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
@@ -33,7 +33,7 @@ jobs:
           key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
           restore-keys: |
             ${{ runner.os }}-node-
-      
+
       - name: Navigate to project directory (if needed)
         run: |
           cd GithubActions  # Use this if package.json is in a subfolder
@@ -44,33 +44,41 @@ jobs:
           cd GithubActions  # Use this if package.json is in a subfolder
           npm install
 
-      - name: Start the application (if needed)
-        run: |
-          cd GithubActions  # Use this if package.json is in a subfolder
-          npm run start &  # Starts your application in the background
-        continue-on-error: true  # This ensures the workflow doesn't fail if app start fails (useful for test environments)
-
-      - name: Run tests and capture passed test names
+      - name: Run tests with npm test
         run: |
           cd GithubActions  # Use this if package.json is in a subfolder
           npm test -- --json --outputFile=test-results.json || true
+
+      - name: Check if any new tests have been added
+        run: |
+          # List new test files added in the last commit
+          $NEW_TESTS = git diff --name-only HEAD~1 HEAD | Select-String -Pattern '\.test\.js$|\.spec\.js$'
+          if ($NEW_TESTS) {
+            Write-Host "New test files detected: $NEW_TESTS"
+            $env.NEW_TESTS = $NEW_TESTS -join "`n"  # Set the new test files in the environment variable
+          } else {
+            Write-Host "No new test files detected."
+          }
+
+      - name: Commit new test results if npm test passes
+        if: ${{ success() && env.NEW_TESTS != '' }}
+        run: |
+          # Check if the tests passed by reading the result file
           if (Test-Path test-results.json) {
             $PASSED_TESTS = (Get-Content test-results.json | ConvertFrom-Json).testResults | Where-Object { $_.status -eq 'passed' } | Select-Object -ExpandProperty name
             if ($PASSED_TESTS) {
               Write-Host "PASSED_TESTS<<EOF"
               $PASSED_TESTS | Write-Host
               Write-Host "EOF"
-              $env:PASSED_TESTS = $PASSED_TESTS -join "`n"  # Set passed tests in the environment variable
+              $env.PASSED_TESTS = $PASSED_TESTS -join "`n"  # Set passed tests in the environment variable
+              
+              # Commit the new test results
+              git config --global user.name "github-actions[bot]"
+              git config --global user.email "github-actions@users.noreply.github.com"
+              $PASSED_TESTS_COMMIT_MESSAGE = "NEW TESTS PASSED: $env.PASSED_TESTS"
+              git commit --allow-empty -m $PASSED_TESTS_COMMIT_MESSAGE
+              git push
             }
           }
-
-      - name: Commit all passed test results in one commit
-        if: ${{ env.PASSED_TESTS != '' }}  # Only commit if there are passed tests
-        run: |
-          git config --global user.name "github-actions[bot]"
-          git config --global user.email "github-actions@users.noreply.github.com"
-          $PASSED_TESTS_COMMIT_MESSAGE = "TESTS PASSED: $env:PASSED_TESTS"
-          git commit --allow-empty -m $PASSED_TESTS_COMMIT_MESSAGE
-          git push
 
 
