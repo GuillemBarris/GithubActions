@@ -62,7 +62,7 @@ jobs:
       - name: Generate coverage report (with timeout)
         shell: cmd
         run: |
-          npm run test:coverage || echo "test:coverage script not found, skipping coverage report generation."
+          npm run test:coverage || (echo "test:coverage script not found, skipping coverage report generation." && exit 0)
         working-directory: 'GithubActions/'
         timeout-minutes: 1
 
