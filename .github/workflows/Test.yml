@@ -61,8 +61,8 @@ jobs:
 
       - name: Run tests and generate coverage report
         run: |
-          npm test -- --watch=false || (echo "Timeout or disconnection error, stopping..." && exit 1)
-          npm run test:coverage
+          npm run test:coverage -- --watch=false || (echo "Timeout or disconnection error, stopping..." && exit 1)
+          
         working-directory: 'GithubActions/'
         timeout-minutes: 1
 
