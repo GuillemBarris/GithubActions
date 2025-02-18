@@ -67,7 +67,6 @@ jobs:
         
       - name: Generate coverage report
         run: npm run test:coverage
-        working-directory: 'GithubActions/'
 
 
       - name: Upload coverage report
