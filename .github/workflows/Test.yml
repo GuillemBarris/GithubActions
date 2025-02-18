@@ -60,16 +60,17 @@ jobs:
           }
 
       - name: Run tests with npm test
-        run: npm test -- --watch=false
+        run: |
+          npm test -- --watch=false || (echo "Timeout or disconnection error, stopping..." && exit 1)
         working-directory: 'GithubActions/'
-        timeout-minutes: 10
-
+        timeout-minutes: 1
+        
       - name: Generate coverage report
         run: npm run test:coverage
         working-directory: 'GithubActions/'
 
       - name: Upload coverage report
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v4  # <-- Actualizado a v4
         with:
           name: coverage-report
           path: GithubActions/coverage/
