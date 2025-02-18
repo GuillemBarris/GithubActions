@@ -70,7 +70,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: coverage-report
-          path: GithubActions/coverage
+          path: GithubActions/coverage/github-actions/
 
       - name: Commit new test results if npm test passes
         if: success() && env.NEW_TESTS_FOUND == 'true'
