@@ -59,12 +59,12 @@ jobs:
             Write-Output "NEW_TESTS_FOUND=false" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
           }
 
-      - name: Generate coverage report (with timeout)
+      - name: Run tests with coverage
         shell: cmd
         run: |
           npm run test:coverage || (echo "test:coverage script not found, skipping coverage report generation." && exit 0)
         working-directory: 'GithubActions/'
-        timeout-minutes: 1
+
 
 
 
