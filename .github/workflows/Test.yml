@@ -66,10 +66,7 @@ jobs:
         timeout-minutes: 1
         
       - name: Generate coverage report
-         run:|
-          npm runtest:coverage -- --watch=false || (echo "Timeout or disconnection error, stopping..." && exit 1)
-        working-directory: 'GithubActions/'
-        timeout-minutes: 1
+        run: npm run test:coverage
 
 
       - name: Upload coverage report
@@ -91,4 +88,5 @@ jobs:
           } else {
             Write-Output "No changes to commit."
           }
+
 
